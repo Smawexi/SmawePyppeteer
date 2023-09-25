@@ -1,6 +1,12 @@
 ### 这是一个使用pyppeteer对指定的请求url进行渲染的库
 
 ---
+### 安装
+``` text
+pip install smawe-pyppeteer
+```
+
+---
 
 ### **快速开始**
 
