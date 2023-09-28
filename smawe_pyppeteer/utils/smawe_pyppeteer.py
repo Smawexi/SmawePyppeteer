@@ -4,6 +4,9 @@ import pyppeteer.network_manager
 from smawe_pyppeteer import pretend as _pretend
 import pyppeteer.errors
 import inspect
+import urllib.parse
+from typing import Iterable, Dict, Union
+import copy
 
 
 class PyppeteerRequest:
@@ -59,7 +62,7 @@ class PyppeteerRequest:
             self._browser = await self._launcher
             self._initialized = True
 
-    async def request(self, url, ua=None, callable=None, **kwargs):
+    async def request(self, url, ua=None, callable=None, cookies: Union[Dict, Iterable[Dict]] = None, **kwargs):
         """
         使用pyppeteer对指定的url进行渲染
         kwargs包含以下参数
@@ -73,6 +76,7 @@ class PyppeteerRequest:
         :param url: url
         :param ua: userAgent(可选), 将userAgent设置为指定的ua, 如果未提供则使用内置的userAgent
         :param callable: 启动了请求拦截后要调用的协程函数, 它接受单个request参数, 未提供则使用默认实现.
+        :param cookies: 一个字典或者包含字典的可迭代对象, 在当前page中要设置的cookie(在访问页面之前设置). e.g. {"name": "n1", "value": "v1"}
         :param kwargs:
         :return: PyppeteerResponse
         """
@@ -96,6 +100,25 @@ class PyppeteerRequest:
         if kwargs.pop("pretend", True):
             for script in _pretend.SCRIPTS:
                 await page.evaluateOnNewDocument(script)
+
+        # set cookies
+        if cookies is not None:
+            parse_result = urllib.parse.urlparse(url)
+            if isinstance(cookies, dict) and "domain" not in cookies.keys():
+                cookies["domain"] = parse_result.hostname
+                await page.setCookie(cookies)
+            elif self.check(cookies):
+                _cookies = []
+                for cookie in cookies:
+                    if "domain" not in cookie:
+                        cookie["domain"] = parse_result.hostname
+                    _cookies.append(cookie)
+                await page.setCookie(*_cookies)
+            else:
+                raise TypeError("please pass to a iterable of include dict, or a dict")
+
+            # reload page
+            await page.reload()
 
         self.enabled_interception(bool(kwargs.pop("enabled_interception", False)))
         if self._enabled_interception:
@@ -145,6 +168,23 @@ class PyppeteerRequest:
         """
         print(request.headers)
         await request.continue_()
+
+    @staticmethod
+    def check(iterable: Iterable[Dict]):
+        """检查iterable是否是一个包含dict的可迭代对象"""
+        try:
+            iterable = copy.deepcopy(iterable)
+        except TypeError:
+            raise TypeError("please pass to a iterable")
+
+        try:
+            for item in iterable:
+                if not isinstance(item, dict):
+                    return False
+            return True
+        except TypeError:
+            print("please pass to a iterable of include dict")
+            return False
 
     def enabled_interception(self, value):
         """
@@ -216,7 +256,7 @@ class PyppeteerResponse:
 
 async def get(
     url, delay=None, wait_for=None, page_width=None, page_height=None,
-    enabled_interception=None, script=None, callable=None, **kwargs
+    enabled_interception=None, script=None, callable=None, cookies=None, **kwargs
 ):
     """
     使用pyppeteer对指定url进行渲染
@@ -228,6 +268,7 @@ async def get(
     :param enabled_interception: 是否启用请求拦截
     :param callable: 启动了请求拦截后要调用的协程函数, 它接受单个request参数, 未提供则使用默认实现.
     :param script: js表达式/js函数, 脚本在最后才执行, 即page关闭前执行. 结果可通过PyppeteerResponse.script_result属性获取.
+    :param cookies: 一个字典或者包含字典的可迭代对象, 在当前打开的page中设置cookie(在访问页面之前设置), e.g. {"name": "n1", "value": "v1"}
     :param kwargs:
         headless(bool): 是否启动无头模式, 默认是True.(启用了此参数(参数被设置为True时), auto_close被强制设为True)
         path(str): 要运行的 Chromium 或 Chrome 可执行文件的路径.
@@ -241,9 +282,8 @@ async def get(
     pretend = kwargs.pop("pretend", True)
     return await PyppeteerRequest(**kwargs).request(
         url, delay=delay, wait_for=wait_for, page_height=page_height, page_width=page_width,
-        pretend=pretend, enabled_interception=enabled_interception, script=script, callable=callable
+        pretend=pretend, enabled_interception=enabled_interception, script=script, callable=callable, cookies=cookies
     )
 
 
 __all__ = ["PyppeteerRequest", "PyppeteerResponse", "get"]
-

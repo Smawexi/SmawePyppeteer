@@ -1,4 +1,5 @@
 .idea
 dist
 smawe_pyppeteer.egg-info
-
+smawe_pyppeteer/__pycache__/
+smawe_pyppeteer/utils/__pycache__/
