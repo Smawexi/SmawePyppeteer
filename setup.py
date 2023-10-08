@@ -1,6 +1,7 @@
 from setuptools import setup, find_packages
 from smawe_pyppeteer.__version__ import version
-
+from pathlib import Path
+import shutil
 
 AUTHOR = "Smawe"
 EMAIL = "1281722462@qq.com"
@@ -11,6 +12,9 @@ with open("README.md", "r", encoding="utf-8") as fp:
     long_description = fp.read()
 REQUIRES_PYTHON = '>=3.6.0'
 REQUIRED = ["pyppeteer"]
+
+shutil.rmtree(Path("./dist"), ignore_errors=True)
+shutil.rmtree(Path("./smawe_pyppeteer.egg-info"), ignore_errors=True)
 
 setup(
     name=NAME,
