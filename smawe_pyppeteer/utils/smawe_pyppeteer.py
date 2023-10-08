@@ -1,7 +1,7 @@
 import asyncio
 from pyppeteer.page import Page
 import pyppeteer.network_manager
-import pretend as _pretend
+from .pretend import SCRIPTS
 import pyppeteer.errors
 import inspect
 import urllib.parse
@@ -114,7 +114,7 @@ class PyppeteerRequest:
         await page.setViewport({"width": width, "height": height})
 
         if kwargs.pop("pretend", True):
-            for script in _pretend.SCRIPTS:
+            for script in SCRIPTS:
                 await page.evaluateOnNewDocument(script)
 
         # set cookies
