@@ -1,12 +1,28 @@
 import asyncio
 from pyppeteer.page import Page
 import pyppeteer.network_manager
-from smawe_pyppeteer import pretend as _pretend
+import pretend as _pretend
 import pyppeteer.errors
 import inspect
 import urllib.parse
 from typing import Iterable, Dict, Union
 import copy
+import logging
+
+logger: logging.Logger = None
+
+
+def _init():
+    global logger
+    logger = logging.getLogger("smawe_pyppeteer")
+    logger.setLevel(logging.DEBUG)
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(logging.DEBUG)
+    stream_handler.setFormatter(logging.Formatter("%(asctime)s | %(levelname)s | %(message)s"))
+    logger.addHandler(stream_handler)
+
+
+_init()
 
 
 class PyppeteerRequest:
@@ -104,8 +120,9 @@ class PyppeteerRequest:
         # set cookies
         if cookies is not None:
             parse_result = urllib.parse.urlparse(url)
-            if isinstance(cookies, dict) and "domain" not in cookies.keys():
-                cookies["domain"] = parse_result.hostname
+            if isinstance(cookies, dict):
+                if "domain" not in cookies.keys():
+                    cookies["domain"] = parse_result.hostname
                 await page.setCookie(cookies)
             elif self.check(cookies):
                 _cookies = []
@@ -125,8 +142,7 @@ class PyppeteerRequest:
             await page.setRequestInterception(True)
             if not callable:
                 page.on("request", lambda request: asyncio.ensure_future(self.handle_request(request)))
-
-            if inspect.iscoroutinefunction(callable):
+            elif inspect.iscoroutinefunction(callable):
                 page.on("request", lambda request: asyncio.ensure_future(callable(request)))
             else:
                 raise TypeError("callable must be coroutine function.")
@@ -135,7 +151,7 @@ class PyppeteerRequest:
             response = await page.goto(url, {"timeout": 30000, "waitUntil": "load"})
         except pyppeteer.errors.TimeoutError as e:
             response = type("response", (object,), {"status": 504, "request": None, "headers": {}})()
-            print(f"Error during page.goto(): {str(e)}")
+            logger.debug(f"Error during page.goto(): {str(e)}")
 
         if delay is not None:
             await asyncio.sleep(delay)
@@ -171,7 +187,7 @@ class PyppeteerRequest:
 
     @staticmethod
     def check(iterable: Iterable[Dict]):
-        """检查iterable是否是一个包含dict的可迭代对象"""
+        """检查iterable是否是一个包含dict的可迭代对象(不包括生成器)"""
         try:
             iterable = copy.deepcopy(iterable)
         except TypeError:
@@ -183,7 +199,7 @@ class PyppeteerRequest:
                     return False
             return True
         except TypeError:
-            print("please pass to a iterable of include dict")
+            logger.debug("please pass to a iterable of include dict")
             return False
 
     def enabled_interception(self, value):
