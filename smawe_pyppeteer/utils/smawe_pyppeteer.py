@@ -45,6 +45,8 @@ class PyppeteerRequest:
         :param kwargs:
         """
         headless = kwargs.pop("headless", None)
+        if not headless:
+            headless = True
         path = kwargs.pop("path", None)
         user_data_dir = kwargs.pop("user_data_dir", None)
         auto_close = kwargs.pop("auto_close", True)
