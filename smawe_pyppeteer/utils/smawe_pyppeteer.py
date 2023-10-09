@@ -1,13 +1,16 @@
 import asyncio
 from pyppeteer.page import Page
 import pyppeteer.network_manager
-from .pretend import SCRIPTS
 import pyppeteer.errors
 import inspect
 import urllib.parse
 from typing import Iterable, Dict, Union
 import copy
 import logging
+import os.path
+import sys
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+import pretend as _pretend
 
 logger: logging.Logger = None
 
@@ -114,7 +117,7 @@ class PyppeteerRequest:
         await page.setViewport({"width": width, "height": height})
 
         if kwargs.pop("pretend", True):
-            for script in SCRIPTS:
+            for script in _pretend.SCRIPTS:
                 await page.evaluateOnNewDocument(script)
 
         # set cookies
