@@ -1,4 +1,6 @@
 import asyncio
+import typing
+
 from pyppeteer.page import Page
 import pyppeteer.network_manager
 import pyppeteer.errors
@@ -137,7 +139,7 @@ class PyppeteerRequest:
                     _cookies.append(cookie)
                 await page.setCookie(*_cookies)
             else:
-                raise TypeError("please pass to a iterable of include dict, or a dict")
+                raise TypeError("please pass to a iterable of include dict (exclude generator), or a dict")
 
             # reload page
             await page.reload()
@@ -196,7 +198,7 @@ class PyppeteerRequest:
         try:
             iterable = copy.deepcopy(iterable)
         except TypeError:
-            raise TypeError("please pass to a iterable")
+            raise TypeError("please pass to a iterable, exclude generator")
 
         try:
             for item in iterable:
@@ -204,7 +206,7 @@ class PyppeteerRequest:
                     return False
             return True
         except TypeError:
-            logger.debug("please pass to a iterable of include dict")
+            logger.debug("please pass to a iterable of include dict, exclude generator")
             return False
 
     def enabled_interception(self, value):
@@ -307,4 +309,18 @@ async def get(
     )
 
 
-__all__ = ["PyppeteerRequest", "PyppeteerResponse", "get"]
+def run(f: typing.Coroutine):
+    """run future, return future result"""
+    return asyncio.get_event_loop().run_until_complete(f)
+
+
+__all__ = ["PyppeteerRequest", "PyppeteerResponse", "get", "run"]
+
+
+if __name__ == '__main__':
+    async def main():
+        r = await get("https://www.baidu.com")
+        return r.text
+
+
+    print(run(main()))
