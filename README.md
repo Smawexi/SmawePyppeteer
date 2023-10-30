@@ -11,7 +11,7 @@ pip install smawe-pyppeteer
 ### **快速开始**
 
 ```python
-from smawe_pyppeteer.utils import get, run
+from smawe_pyppeteer import get, run
 
 if __name__ == '__main__':
     from pathlib import Path
@@ -19,7 +19,7 @@ if __name__ == '__main__':
     async def main():
         script = "document.cookie"
         r = await get(
-            "http://www.fangdi.com.cn/index.html", auto_close=True, delay=5, pretend=True,
+            "http://www.fangdi.com.cn/index.html", auto_close=True, delay=5, pretend=True, headless=True,
             user_data_dir=Path("./test").resolve(),
             args=[], script=script, callable=handle,
             enabled_interception=True, enabled_maximize=False, cookies={"name": "k1", "value": "v1"}
