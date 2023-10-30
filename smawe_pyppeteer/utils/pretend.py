@@ -1,3 +1,10 @@
+import importlib.abc
+import importlib.machinery
+import importlib.util
+import types
+
+__package__ = "smawe_pyppeteer.utils"
+
 SET_WEBDRIVER = '''() => {Object.defineProperty(navigator, 'webdriver', {get: () => undefined})}'''
 SET_USER_AGENT = '''() => {Object.defineProperty(navigator, 'userAgent', {get: () => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36'})}'''
 SET_APP_VERSION = '''() => {Object.defineProperty(navigator, 'appVersion', {get: () => '5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36'})}'''
@@ -83,3 +90,31 @@ SCRIPTS = [
     SET_PERMISSION,
     SET_WEBGL,
 ]
+
+
+class PretendLoader(importlib.abc.Loader):
+
+    only_read = ("__name__", "__doc__", "__package__", "__loader__", "__spec__")
+
+    def create_module(self, spec):
+        """使用默认的模块创建语义"""
+        module = types.ModuleType(spec.name)
+        module.__file__ = __file__
+        module.__loader__ = self
+        return module
+
+    def exec_module(self, module):
+        gns = globals().copy()
+        for k in self.only_read:
+            gns.pop(k, None)
+        module.__dict__.update(gns)
+
+
+class PretendFinder(importlib.abc.MetaPathFinder):
+
+    __is_custom__ = True
+
+    def find_spec(self, fullname, path, target=None):
+        if fullname in ("pretend", "smawe_pyppeteer.utils.pretend"):
+            return importlib.machinery.ModuleSpec(fullname, PretendLoader())
+        return None

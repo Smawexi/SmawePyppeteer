@@ -1,20 +1,45 @@
 import asyncio
-import typing
-
-from pyppeteer.page import Page
-import pyppeteer.network_manager
-import pyppeteer.errors
 import inspect
+import sys
+import types
 import urllib.parse
-from typing import Iterable, Dict, Union
+from typing import Iterable, Dict, Union, Coroutine
 import copy
 import logging
-import os.path
-import sys
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-import pretend as _pretend
+import importlib.machinery
+from pathlib import PurePath
+import warnings
+import _locale
+_locale._getdefaultlocale = lambda *args: ("zh_CN", "utf-8")
+warnings.filterwarnings("ignore", category=SyntaxWarning)
 
+
+def _import_submodule(parent: PurePath, name):
+    _submodule_location = parent.joinpath(f"{name}.py")
+    spec = importlib.util.spec_from_file_location(name, _submodule_location)
+    sub_module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = sub_module
+    spec.loader.exec_module(sub_module)
+    return sub_module
+
+
+try:
+    import pyppeteer.page
+    import pyppeteer.network_manager
+    import pyppeteer.errors
+except ModuleNotFoundError as e:
+    raise
+
+try:
+    _pretend = importlib.import_module(".pretend", package="smawe_pyppeteer.utils")
+except ModuleNotFoundError as e:
+    _parent_path = PurePath(__file__).parent
+    _pretend = _import_submodule(_parent_path, "pretend")
+
+_Page = pyppeteer.page.Page
 logger: logging.Logger = None
+__package__ = "smawe_pyppeteer.utils"
+__all__ = ["PyppeteerRequest", "PyppeteerResponse", "get", "run", "PyppeteerFinder", "PyppeteerLoader", "logger"]
 
 
 def _init():
@@ -110,7 +135,7 @@ class PyppeteerRequest:
         width = 800 if width is None else width
         height = kwargs.pop("page_height")
         height = 600 if height is None else height
-        page: Page = await self._browser.newPage()
+        page: _Page = await self._browser.newPage()
 
         if ua is not None:
             await page.setUserAgent(ua)
@@ -139,7 +164,7 @@ class PyppeteerRequest:
                     _cookies.append(cookie)
                 await page.setCookie(*_cookies)
             else:
-                raise TypeError("please pass to a iterable of include dict (exclude generator), or a dict")
+                raise TypeError("please pass to a iterable of include dict (exclude iterator), or a dict")
 
             # reload page
             await page.reload()
@@ -194,11 +219,11 @@ class PyppeteerRequest:
 
     @staticmethod
     def check(iterable: Iterable[Dict]):
-        """检查iterable是否是一个包含dict的可迭代对象(不包括生成器)"""
+        """检查iterable是否是一个包含dict的可迭代对象(不包括迭代器)"""
         try:
             iterable = copy.deepcopy(iterable)
         except TypeError:
-            raise TypeError("please pass to a iterable, exclude generator")
+            raise TypeError("please pass to a iterable, exclude iterator")
 
         try:
             for item in iterable:
@@ -206,7 +231,7 @@ class PyppeteerRequest:
                     return False
             return True
         except TypeError:
-            logger.debug("please pass to a iterable of include dict, exclude generator")
+            logger.debug("please pass to a iterable of include dict, exclude iterator")
             return False
 
     def enabled_interception(self, value):
@@ -309,18 +334,42 @@ async def get(
     )
 
 
-def run(f: typing.Coroutine):
+def run(f: Coroutine):
     """run future, return future result"""
     return asyncio.get_event_loop().run_until_complete(f)
 
 
-__all__ = ["PyppeteerRequest", "PyppeteerResponse", "get", "run"]
+class PyppeteerLoader(importlib.abc.Loader):
+
+    only_read = ("__name__", "__doc__", "__package__", "__loader__", "__spec__")
+
+    def create_module(self, spec):
+        """使用默认的模块创建语义"""
+        module = types.ModuleType(spec.name)
+        module.__file__ = __file__
+        module.__loader__ = self
+        return module
+
+    def exec_module(self, module):
+        gns = globals().copy()
+        for k in self.only_read:
+            gns.pop(k, None)
+        module.__dict__.update(gns)
+
+
+class PyppeteerFinder(importlib.abc.MetaPathFinder):
+
+    __is_custom__ = True
+
+    def find_spec(self, fullname, path, target=None):
+        if fullname in ("smawe_pyppeteer", "smawe_pyppeteer.utils.smawe_pyppeteer"):
+            return importlib.machinery.ModuleSpec(fullname, PyppeteerLoader())
+        return None
 
 
 if __name__ == '__main__':
     async def main():
         r = await get("https://www.baidu.com")
         return r.text
-
 
     print(run(main()))

@@ -27,7 +27,7 @@ setup(
     python_requires=REQUIRES_PYTHON,
     url=URL,
     install_requires=REQUIRED,
-    packages=find_packages(where="."),
+    packages=find_packages(where=".", exclude=("tests",)),
     include_package_data=False,
     classifiers=[
         'Programming Language :: Python :: 3.6',
@@ -38,4 +38,3 @@ setup(
         'Programming Language :: Python :: Implementation :: CPython',
     ],
 )
-
