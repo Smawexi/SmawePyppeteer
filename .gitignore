@@ -6,3 +6,5 @@ smawe_pyppeteer/utils/__pycache__/
 test/
 tests/
 __pycache__/
+smawe_pyppeteer/*.pyc
+smawe_pyppeteer/utils/*.pyc
