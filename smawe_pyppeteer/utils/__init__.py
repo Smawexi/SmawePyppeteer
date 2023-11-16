@@ -77,9 +77,8 @@ pretend = import_module("pretend")
 # smawe_pyppeteer: smawe_pyppeteer.utils.smawe_pyppeteer module
 smawe_pyppeteer = import_module("smawe_pyppeteer")
 
-"""
-declare PyppeteerRequest PyppeteerResponse logger get run
-"""
+
+# declare
 logger: logging.Logger = None
 
 
@@ -212,11 +211,21 @@ def run(f: Coroutine):
     pass
 
 
-# import "PyppeteerRequest", "PyppeteerResponse", "get", "run", "PyppeteerFinder", "PyppeteerLoader", "logger"
+def _get(
+    url, delay=None, wait_for=None, page_width=None, page_height=None,
+    enabled_interception=None, script=None, callable=None, cookies=None, **kwargs
+) -> PyppeteerResponse:
+    """get函数的高级封装, 这是一个普通函数的写法, 让使用变得简单, 内部是使用异步来实现的"""
+    pass
+
+
+# load "PyppeteerRequest", "PyppeteerResponse", "get", "run", "PyppeteerFinder", "PyppeteerLoader", "logger", "_get"
 for n in smawe_pyppeteer.__all__:
     globals()[n] = getattr(smawe_pyppeteer, n)
 
+goto = _get
+
 __all__ = [
     "PyppeteerRequest", "PyppeteerResponse", "get", "run", "PyppeteerFinder", "PyppeteerLoader", "logger",
-    "pretend", "smawe_pyppeteer"
+    "pretend", "smawe_pyppeteer", "goto"
 ]

@@ -39,7 +39,9 @@ except ModuleNotFoundError as e:
 _Page = pyppeteer.page.Page
 logger: logging.Logger = None
 __package__ = "smawe_pyppeteer.utils"
-__all__ = ["PyppeteerRequest", "PyppeteerResponse", "get", "run", "PyppeteerFinder", "PyppeteerLoader", "logger"]
+__all__ = [
+    "PyppeteerRequest", "PyppeteerResponse", "get", "run", "PyppeteerFinder", "PyppeteerLoader", "logger", "_get"
+]
 
 
 def _init():
@@ -336,7 +338,10 @@ async def get(
 
 def run(f: Coroutine):
     """run future, return future result"""
-    return asyncio.get_event_loop().run_until_complete(f)
+    try:
+        return asyncio.get_running_loop().run_until_complete(f)
+    except RuntimeError:
+        return asyncio.new_event_loop().run_until_complete(f)
 
 
 class PyppeteerLoader(importlib.abc.Loader):
@@ -367,9 +372,18 @@ class PyppeteerFinder(importlib.abc.MetaPathFinder):
         return None
 
 
-if __name__ == '__main__':
-    async def main():
-        r = await get("https://www.baidu.com")
-        return r.text
+def _get(
+    url, delay=None, wait_for=None, page_width=None, page_height=None,
+    enabled_interception=None, script=None, callable=None, cookies=None, **kwargs
+) -> PyppeteerResponse:
+    """get函数的高级封装, 这是一个普通函数的写法, 让使用变得简单"""
+    return run(get(
+        url, delay=delay, wait_for=wait_for, page_width=page_width,
+        page_height=page_height, enabled_interception=enabled_interception, script=script, callable=callable,
+        cookies=cookies, **kwargs
+    ))
 
-    print(run(main()))
+
+if __name__ == '__main__':
+    r = _get("https://www.baidu.com")
+    print(r.text)
